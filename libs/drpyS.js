@@ -5,6 +5,9 @@ import {createRequire} from 'module';
 import {XMLHttpRequest} from 'xmlhttprequest';
 import path from "path";
 import vm from 'vm';
+import WebSocket, {WebSocketServer} from 'ws';
+import zlib from 'zlib';
+import * as minizlib from 'minizlib';
 import '../libs_drpy/es6-extend.js'
 import {getSitesMap} from "../utils/sites-map.js";
 import * as utils from '../utils/utils.js';
@@ -50,6 +53,10 @@ globalThis.Ali = Ali;
 globalThis.require = createRequire(import.meta.url);
 globalThis._fetch = fetch;
 globalThis.XMLHttpRequest = XMLHttpRequest;
+globalThis.WebSocket = WebSocket;
+globalThis.WebSocketServer = WebSocketServer;
+globalThis.zlib = zlib;
+globalThis.minizlib = minizlib;
 globalThis.AIS = AIS;
 globalThis.pathLib = {
     basename: path.basename,
@@ -128,7 +135,7 @@ globalThis.simplecc = simplecc;
 
 
 export async function getSandbox(env = {}) {
-    const {getProxyUrl} = env;
+    const {getProxyUrl, hostUrl, fServer} = env;
     // (可选) 加载所有 wasm 文件
     await CryptoJSW.loadAllWasm();
     const utilsSanbox = {
@@ -145,6 +152,8 @@ export async function getSandbox(env = {}) {
         $,
         pupWebview,
         getProxyUrl,
+        hostUrl,
+        fServer,
         getContentType, getMimeType,
     };
     const drpySanbox = {
@@ -176,6 +185,7 @@ export async function getSandbox(env = {}) {
         print,
         jsonToCookie,
         cookieToJson,
+        runMain,
     };
     const drpyCustomSanbox = {
         MOBILE_UA,
@@ -257,6 +267,10 @@ export async function getSandbox(env = {}) {
         UC,
         Ali,
         require,
+        WebSocket,
+        WebSocketServer,
+        zlib,
+        minizlib,
     };
 
     // 创建一个沙箱上下文，注入需要的全局变量和函数
@@ -317,17 +331,22 @@ export async function init(filePath, env, refresh) {
         // 计算文件的 hash 值
         const fileHash = computeHash(fileContent);
         const moduleName = path.basename(filePath, '.js');
-        const moduleExt = env.ext;
+        let moduleExt = env.ext;
         // log('moduleName:', moduleName);
         // log('moduleExt:', moduleExt);
         let SitesMap = getSitesMap(_config_path);
         // log('SitesMap:', SitesMap);
         if (moduleExt && SitesMap[moduleName]) {
+            try {
+                moduleExt = ungzip(moduleExt);
+            } catch (e) {
+                log(`[${moduleName}] ungzip解密moduleExt失败: ${e.message}`);
+            }
             if (!SitesMap[moduleName].find(i => i.queryStr === moduleExt) && !SitesMap[moduleName].find(i => i.queryObject.params === moduleExt)) {
                 throw new Error("moduleExt is wrong!")
             }
         }
-        let hashMd5 = md5(filePath + moduleExt);
+        let hashMd5 = md5(filePath + '#pAq#' + moduleExt);
 
         // 检查缓存：是否有文件且未刷新且文件 hash 未变化
         if (moduleCache.has(hashMd5) && !refresh) {
@@ -342,6 +361,7 @@ export async function init(filePath, env, refresh) {
         const {sandbox, context} = await getSandbox(env);
         // 执行文件内容，将其放入沙箱中
         const js_code = getOriginalJs(fileContent);
+        // console.log('js_code:', js_code.slice(5000));
         const js_code_wrapper = `
     _asyncGetRule  = (async function() {
         ${js_code}
@@ -391,7 +411,7 @@ export async function init(filePath, env, refresh) {
                 rule.params = moduleExt
             }
         }
-        await initParse(rule, vm, context);
+        await initParse(rule, env, vm, context);
         // otherScript放入到initParse去执行
 //         const otherScript = new vm.Script(`
 // globalThis.jsp = new jsoup(rule.host||'');
@@ -533,9 +553,25 @@ async function invokeWithInjectVars(rule, method, injectVars, args) {
             injectVars[key] = value;
         }
     });
-    let result = await method.apply(thisProxy, args);
+    let result = {};
+    let error = null;
+    try {
+        result = await method.apply(thisProxy, args);
+    } catch (e) {
+        error = e;
+    }
+    if (!['推荐'].includes(injectVars['method']) && error) {
+        throw error
+    }
     // let result = await method.apply(injectVars, args);  // 使用 apply 临时注入 injectVars 作为上下文，并执行方法
     switch (injectVars['method']) {
+        case '推荐':
+            if (error) {
+                log('error:', error);
+                error = null;
+                result = [];
+            }
+            break;
         case 'class_parse':
             result = await homeParseAfter(result, rule.类型, rule.hikerListCol, rule.hikerClassListCol, injectVars);
             break;
@@ -554,6 +590,14 @@ async function invokeWithInjectVars(rule, method, injectVars, args) {
             result = await playParseAfter(rule, result, args[1], args[0]);
             console.log(`免嗅 ${injectVars.input} 执行完毕,结果为:`, JSON.stringify(result));
             break;
+        case 'proxy_rule':
+            break;
+        default:
+            console.log(`invokeWithInjectVars: ${injectVars['method']}`);
+            break;
+    }
+    if (error) {
+        throw error
     }
     return result
 }
@@ -618,19 +662,28 @@ async function invokeMethod(filePath, env, method, args = [], injectVars = {}) {
     injectVars['method'] = method;
     // 环境变量扩展进入this区域
     Object.assign(injectVars, env);
-    if (moduleObject[method] && typeof moduleObject[method] === 'function') {
+    if (method === 'lazy') {
+        const tmpLazyFunction = async function () {
+            let {input} = this;
+            return input
+        };
+        if (moduleObject[method] && typeof moduleObject[method] === 'function') {
+            try {
+                return await invokeWithInjectVars(moduleObject, moduleObject[method], injectVars, args);
+            } catch (e) {
+                log(`执行免嗅代码发送了错误: ${e.message}`);
+                return await invokeWithInjectVars(moduleObject, tmpLazyFunction, injectVars, args);
+            }
+        } else if (!moduleObject[method]) {// 新增特性，可以不写lazy属性
+            return await invokeWithInjectVars(moduleObject, tmpLazyFunction, injectVars, args);
+        }
+    } else if (moduleObject[method] && typeof moduleObject[method] === 'function') {
         // console.log('injectVars:', injectVars);
         return await invokeWithInjectVars(moduleObject, moduleObject[method], injectVars, args);
     } else if (!moduleObject[method] && method === 'class_parse') { // 新增特性，可以不写class_parse属性
         const tmpClassFunction = async function () {
         };
         return await invokeWithInjectVars(moduleObject, tmpClassFunction, injectVars, args);
-    } else if (!moduleObject[method] && method === 'lazy') { // 新增特性，可以不写lazy属性
-        const tmpLazyFunction = async function () {
-            let {input} = this;
-            return input
-        };
-        return await invokeWithInjectVars(moduleObject, tmpLazyFunction, injectVars, args);
     } else {
         if (['推荐', '一级', '搜索'].includes(method)) {
             return []
@@ -649,7 +702,7 @@ async function invokeMethod(filePath, env, method, args = [], injectVars = {}) {
     }
 }
 
-async function initParse(rule, vm, context) {
+async function initParse(rule, env, vm, context) {
     rule.host = (rule.host || '').rstrip('/');
     // 检查并执行 `hostJs` 方法
     if (typeof rule.hostJs === 'function') {
@@ -761,7 +814,7 @@ globalThis.rule_fetch_params = rule.rule_fetch_params;
     // 检查并执行 `预处理` 方法
     if (typeof rule.预处理 === 'function') {
         log('Executing 预处理...');
-        await rule.预处理();
+        await rule.预处理(env);
     }
 
     const otherScript = new vm.Script(`
@@ -780,8 +833,10 @@ async function homeParse(rule) {
     if (typeof (rule.filter) === 'string' && rule.filter.trim().length > 0) {
         try {
             let filter_json = ungzip(rule.filter.trim());
+            // log(filter_json);
             rule.filter = JSON.parse(filter_json);
         } catch (e) {
+            log(`[${rule.title}] filter ungzip或格式化解密出错: ${e.message}`);
             rule.filter = {};
         }
     }
@@ -963,6 +1018,7 @@ async function detailParse(rule, ids) {
         input: url,
         vid: vid,
         orId: orId,
+        fyclass: fyclass,
         MY_URL: url,
         fetch_params: deepCopy(rule.rule_fetch_params),
         jsp: jsp,
@@ -1219,21 +1275,23 @@ export function getOriginalJs(js_code) {
     let decode_content = '';
 
     function aes_decrypt(data) {
+        // log(data);
         let key = CryptoJS.enc.Hex.parse("686A64686E780A0A0A0A0A0A0A0A0A0A");
         let iv = CryptoJS.enc.Hex.parse("647A797964730A0A0A0A0A0A0A0A0A0A");
-        let encrypted = CryptoJS.AES.decrypt({
-            ciphertext: CryptoJS.enc.Base64.parse(data)
-        }, key, {
+        let ciphertext = CryptoJS.enc.Base64.parse(data);
+        let decrypted = CryptoJS.AES.decrypt({ciphertext: ciphertext}, key, {
             iv: iv,
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7
         }).toString(CryptoJS.enc.Utf8);
-        return encrypted;
+        // log(decrypted);
+        return decrypted;
     }
 
     let error_log = false;
 
     function logger(text) {
+        // console.log('[logger]:', text);
         if (error_log) {
             log(text);
         }
@@ -1272,7 +1330,20 @@ export function getOriginalJs(js_code) {
                 return ''
             }
         },
-        // (text)=>{try {return NODERSA.decryptRSAWithPrivateKey(text, RSA.getPrivateKey(rsa_private_key).replace(/RSA /g,''), {options: {environment: "browser", encryptionScheme: 'pkcs1',b:'1024'}});} catch (e) {log(e.message);return ''}},
+        // (text) => {
+        //     try {
+        //         return NODERSA.decryptRSAWithPrivateKey(text, RSA.getPrivateKey(rsa_private_key).replace(/RSA /g, ''), {
+        //             options: {
+        //                 environment: "browser",
+        //                 encryptionScheme: 'pkcs1',
+        //                 b: '1024'
+        //             }
+        //         });
+        //     } catch (e) {
+        //         log(e.message);
+        //         return ''
+        //     }
+        // },
     ]
     let func_index = 0
     while (!current_match.test(decode_content)) {
@@ -1302,7 +1373,10 @@ export const jsEncoder = {
 
         // 返回Base64编码的加密结果
         return encrypted.ciphertext.toString(CryptoJS.enc.Base64);
+        // 返回完整的加密结果（包括 IV 和其他元数据）
+        // return encrypted.toString(); // Base64 格式
     },
+
     rsa_encode: function (text) {
         let rsa_private_key = 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCqin/jUpqM6+fgYP/oMqj9zcdHMM0mEZXLeTyixIJWP53lzJV2N2E3OP6BBpUmq2O1a9aLnTIbADBaTulTNiOnVGoNG58umBnupnbmmF8iARbDp2mTzdMMeEgLdrfXS6Y3VvazKYALP8EhEQykQVarexR78vRq7ltY3quXx7cgI0ROfZz5Sw3UOLQJ+VoWmwIxu9AMEZLVzFDQN93hzuzs3tNyHK6xspBGB7zGbwCg+TKi0JeqPDrXxYUpAz1cQ/MO+Da0WgvkXnvrry8NQROHejdLVOAslgr6vYthH9bKbsGyNY3H+P12kcxo9RAcVveONnZbcMyxjtF5dWblaernAgMBAAECggEAGdEHlSEPFmAr5PKqKrtoi6tYDHXdyHKHC5tZy4YV+Pp+a6gxxAiUJejx1hRqBcWSPYeKne35BM9dgn5JofgjI5SKzVsuGL6bxl3ayAOu+xXRHWM9f0t8NHoM5fdd0zC3g88dX3fb01geY2QSVtcxSJpEOpNH3twgZe6naT2pgiq1S4okpkpldJPo5GYWGKMCHSLnKGyhwS76gF8bTPLoay9Jxk70uv6BDUMlA4ICENjmsYtd3oirWwLwYMEJbSFMlyJvB7hjOjR/4RpT4FPnlSsIpuRtkCYXD4jdhxGlvpXREw97UF2wwnEUnfgiZJ2FT/MWmvGGoaV/CfboLsLZuQKBgQDTNZdJrs8dbijynHZuuRwvXvwC03GDpEJO6c1tbZ1s9wjRyOZjBbQFRjDgFeWs9/T1aNBLUrgsQL9c9nzgUziXjr1Nmu52I0Mwxi13Km/q3mT+aQfdgNdu6ojsI5apQQHnN/9yMhF6sNHg63YOpH+b+1bGRCtr1XubuLlumKKscwKBgQDOtQ2lQjMtwsqJmyiyRLiUOChtvQ5XI7B2mhKCGi8kZ+WEAbNQcmThPesVzW+puER6D4Ar4hgsh9gCeuTaOzbRfZ+RLn3Aksu2WJEzfs6UrGvm6DU1INn0z/tPYRAwPX7sxoZZGxqML/z+/yQdf2DREoPdClcDa2Lmf1KpHdB+vQKBgBXFCVHz7a8n4pqXG/HvrIMJdEpKRwH9lUQS/zSPPtGzaLpOzchZFyQQBwuh1imM6Te+VPHeldMh3VeUpGxux39/m+160adlnRBS7O7CdgSsZZZ/dusS06HAFNraFDZf1/VgJTk9BeYygX+AZYu+0tReBKSs9BjKSVJUqPBIVUQXAoGBAJcZ7J6oVMcXxHxwqoAeEhtvLcaCU9BJK36XQ/5M67ceJ72mjJC6/plUbNukMAMNyyi62gO6I9exearecRpB/OGIhjNXm99Ar59dAM9228X8gGfryLFMkWcO/fNZzb6lxXmJ6b2LPY3KqpMwqRLTAU/zy+ax30eFoWdDHYa4X6e1AoGAfa8asVGOJ8GL9dlWufEeFkDEDKO9ww5GdnpN+wqLwePWqeJhWCHad7bge6SnlylJp5aZXl1+YaBTtOskC4Whq9TP2J+dNIgxsaF5EFZQJr8Xv+lY9lu0CruYOh9nTNF9x3nubxJgaSid/7yRPfAGnsJRiknB5bsrCvgsFQFjJVs=';
         return RSA.encode(text, rsa_private_key, null);
@@ -1310,16 +1384,41 @@ export const jsEncoder = {
 };
 
 export const jsDecoder = {
+    base64Decode,
+    ungzip,
     aes_decrypt: function (data) {
         let key = CryptoJS.enc.Hex.parse("686A64686E780A0A0A0A0A0A0A0A0A0A");
         let iv = CryptoJS.enc.Hex.parse("647A797964730A0A0A0A0A0A0A0A0A0A");
-        let encrypted = CryptoJS.AES.decrypt({
-            ciphertext: CryptoJS.enc.Base64.parse(data)
-        }, key, {
+        let ciphertext = CryptoJS.enc.Base64.parse(data);
+        let decrypted = CryptoJS.AES.decrypt({ciphertext: ciphertext}, key, {
             iv: iv,
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7
         }).toString(CryptoJS.enc.Utf8);
-        return encrypted;
+        return decrypted;
     },
+    rsa_decode: function (text) {
+        let rsa_private_key = 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCqin/jUpqM6+fgYP/oMqj9zcdHMM0mEZXLeTyixIJWP53lzJV2N2E3OP6BBpUmq2O1a9aLnTIbADBaTulTNiOnVGoNG58umBnupnbmmF8iARbDp2mTzdMMeEgLdrfXS6Y3VvazKYALP8EhEQykQVarexR78vRq7ltY3quXx7cgI0ROfZz5Sw3UOLQJ+VoWmwIxu9AMEZLVzFDQN93hzuzs3tNyHK6xspBGB7zGbwCg+TKi0JeqPDrXxYUpAz1cQ/MO+Da0WgvkXnvrry8NQROHejdLVOAslgr6vYthH9bKbsGyNY3H+P12kcxo9RAcVveONnZbcMyxjtF5dWblaernAgMBAAECggEAGdEHlSEPFmAr5PKqKrtoi6tYDHXdyHKHC5tZy4YV+Pp+a6gxxAiUJejx1hRqBcWSPYeKne35BM9dgn5JofgjI5SKzVsuGL6bxl3ayAOu+xXRHWM9f0t8NHoM5fdd0zC3g88dX3fb01geY2QSVtcxSJpEOpNH3twgZe6naT2pgiq1S4okpkpldJPo5GYWGKMCHSLnKGyhwS76gF8bTPLoay9Jxk70uv6BDUMlA4ICENjmsYtd3oirWwLwYMEJbSFMlyJvB7hjOjR/4RpT4FPnlSsIpuRtkCYXD4jdhxGlvpXREw97UF2wwnEUnfgiZJ2FT/MWmvGGoaV/CfboLsLZuQKBgQDTNZdJrs8dbijynHZuuRwvXvwC03GDpEJO6c1tbZ1s9wjRyOZjBbQFRjDgFeWs9/T1aNBLUrgsQL9c9nzgUziXjr1Nmu52I0Mwxi13Km/q3mT+aQfdgNdu6ojsI5apQQHnN/9yMhF6sNHg63YOpH+b+1bGRCtr1XubuLlumKKscwKBgQDOtQ2lQjMtwsqJmyiyRLiUOChtvQ5XI7B2mhKCGi8kZ+WEAbNQcmThPesVzW+puER6D4Ar4hgsh9gCeuTaOzbRfZ+RLn3Aksu2WJEzfs6UrGvm6DU1INn0z/tPYRAwPX7sxoZZGxqML/z+/yQdf2DREoPdClcDa2Lmf1KpHdB+vQKBgBXFCVHz7a8n4pqXG/HvrIMJdEpKRwH9lUQS/zSPPtGzaLpOzchZFyQQBwuh1imM6Te+VPHeldMh3VeUpGxux39/m+160adlnRBS7O7CdgSsZZZ/dusS06HAFNraFDZf1/VgJTk9BeYygX+AZYu+0tReBKSs9BjKSVJUqPBIVUQXAoGBAJcZ7J6oVMcXxHxwqoAeEhtvLcaCU9BJK36XQ/5M67ceJ72mjJC6/plUbNukMAMNyyi62gO6I9exearecRpB/OGIhjNXm99Ar59dAM9228X8gGfryLFMkWcO/fNZzb6lxXmJ6b2LPY3KqpMwqRLTAU/zy+ax30eFoWdDHYa4X6e1AoGAfa8asVGOJ8GL9dlWufEeFkDEDKO9ww5GdnpN+wqLwePWqeJhWCHad7bge6SnlylJp5aZXl1+YaBTtOskC4Whq9TP2J+dNIgxsaF5EFZQJr8Xv+lY9lu0CruYOh9nTNF9x3nubxJgaSid/7yRPfAGnsJRiknB5bsrCvgsFQFjJVs=';
+        return RSA.decode(text, rsa_private_key, null);
+    }
 };
+
+
+/**
+ * 执行main函数
+ * 示例  function main(text){return gzip(text)}
+ * @param main_func_code
+ * @param arg
+ */
+export async function runMain(main_func_code, arg) {
+    let mainFunc = async function () {
+        return ''
+    };
+    try {
+        eval(main_func_code + '\nmainFunc=main;');
+        return mainFunc(arg);
+    } catch (e) {
+        log(`执行main_func_code发生了错误:${e.message}`);
+        return ''
+    }
+}

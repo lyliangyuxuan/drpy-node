@@ -1,5 +1,5 @@
 {
-  "sites_count": 43,
+  "sites_count": 63,
   "sites": [
     {
       "key": "drpyS_设置中心",
@@ -84,7 +84,7 @@
       "searchable": 2,
       "filterable": 1,
       "quickSearch": 0,
-      "ext": "../json/哔哩大全.json"
+      "ext": "H4sIAAAAAAAAA9PT088qzs/Tfzp5ytPJK58uWf60dYUeSAQAZ2A+OBkAAAA="
     },
     {
       "key": "drpyS_哔哩教育[官]",
@@ -94,7 +94,17 @@
       "searchable": 2,
       "filterable": 1,
       "quickSearch": 0,
-      "ext": "../json/哔哩教育.json"
+      "ext": "H4sIAAAAAAAAA9PT088qzs/Tfzp5ytPJK59NnfmiaZMeSAQAgv7xPBkAAAA="
+    },
+    {
+      "key": "drpyS_哔哩影视[官]",
+      "name": "哔哩影视[官](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/哔哩影视[官]",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": ""
     },
     {
       "key": "drpyS_哔哩直播[官]",
@@ -105,6 +115,46 @@
       "filterable": 1,
       "quickSearch": 0,
       "ext": ""
+    },
+    {
+      "key": "drpyS_播剧网",
+      "name": "播剧网(DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/播剧网",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_采王成人[密]",
+      "name": "采王成人[密](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/采集之王[合]",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": "H4sIAAAAAAAAA9PT088qzs/Tf9ne/nJ2W/TT9W2xL+fOfNbQqAcSVjFUAQAd5YgpIQAAAA=="
+    },
+    {
+      "key": "drpyS_采王道长[合]",
+      "name": "采王道长[合](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/采集之王[合]",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": "H4sIAAAAAAAAA9PT088qzs/Tf9ne/nJ228u5M581NOqBRFQMAcGPDNobAAAA"
+    },
+    {
+      "key": "drpyS_采王zy[密]",
+      "name": "采王zy[密](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/采集之王[合]",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": "H4sIAAAAAAAAA9PT088qzs/Tf9ne/nJ2W3RVZezLuTOfNTTqgURVDAGu/MCKHwAAAA=="
     },
     {
       "key": "drpyS_动漫巴士[漫]",
@@ -123,6 +173,16 @@
       "api": "http://localhost:5757/api/动作交互",
       "searchable": 0,
       "filterable": 0,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_抖音直播弹幕[官]",
+      "name": "抖音直播弹幕[官](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/抖音直播弹幕[官]",
+      "searchable": 1,
+      "filterable": 1,
       "quickSearch": 0,
       "ext": ""
     },
@@ -157,6 +217,16 @@
       "ext": ""
     },
     {
+      "key": "drpyS_光速[优]",
+      "name": "光速[优](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/光速[优]",
+      "searchable": 1,
+      "filterable": 0,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
       "key": "drpyS_好乐影视",
       "name": "好乐影视(DS)",
       "type": 4,
@@ -177,10 +247,30 @@
       "ext": ""
     },
     {
+      "key": "drpyS_虎斑[盘]",
+      "name": "虎斑[盘](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/虎斑[盘]",
+      "searchable": 0,
+      "filterable": 0,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
       "key": "drpyS_火车太堵",
       "name": "火车太堵(DS)",
       "type": 4,
       "api": "http://localhost:5757/api/火车太堵",
+      "searchable": 1,
+      "filterable": 0,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_集百动漫",
+      "name": "集百动漫(DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/集百动漫",
       "searchable": 1,
       "filterable": 0,
       "quickSearch": 0,
@@ -201,6 +291,16 @@
       "name": "金牌影院(DS)",
       "type": 4,
       "api": "http://localhost:5757/api/金牌影院",
+      "searchable": 2,
+      "filterable": 0,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_九七电影网",
+      "name": "九七电影网(DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/九七电影网",
       "searchable": 2,
       "filterable": 0,
       "quickSearch": 0,
@@ -232,6 +332,56 @@
       "type": 4,
       "api": "http://localhost:5757/api/老白故事[听]",
       "searchable": 2,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_美颜怪[擦]",
+      "name": "美颜怪[擦](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/美颜怪[擦]",
+      "searchable": 0,
+      "filterable": 0,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_木偶[盘]",
+      "name": "木偶[盘](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/木偶[盘]",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_欧哥[盘]",
+      "name": "欧哥[盘](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/欧哥[盘]",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_皮皮虾[优]",
+      "name": "皮皮虾[优](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/皮皮虾[优]",
+      "searchable": 2,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_七度空间[密]",
+      "name": "七度空间[密](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/七度空间[密]",
+      "searchable": 1,
       "filterable": 1,
       "quickSearch": 0,
       "ext": ""
@@ -292,6 +442,16 @@
       "type": 4,
       "api": "http://localhost:5757/api/素白白",
       "searchable": 2,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_特下饭[盘]",
+      "name": "特下饭[盘](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/特下饭[盘]",
+      "searchable": 1,
       "filterable": 1,
       "quickSearch": 0,
       "ext": ""
@@ -367,6 +527,26 @@
       "ext": ""
     },
     {
+      "key": "drpyS_樱漫[漫]",
+      "name": "樱漫[漫](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/樱漫[漫]",
+      "searchable": 1,
+      "filterable": 0,
+      "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_直播转点播[合]",
+      "name": "直播转点播[合](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/直播转点播[合]",
+      "searchable": 1,
+      "filterable": 1,
+      "quickSearch": 0,
+      "ext": "H4sIAAAAAAAAA9PT088qzs/Tz8ksSzVKzi3WA/EAuuBHLxUAAAA="
+    },
+    {
       "key": "drpyS_至臻[盘]",
       "name": "至臻[盘](DS)",
       "type": 4,
@@ -417,6 +597,16 @@
       "ext": ""
     },
     {
+      "key": "drpyS_Nyafun[漫]",
+      "name": "Nyafun[漫](DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/Nyafun[漫]",
+      "searchable": 1,
+      "filterable": 0,
+      "quickSearch": 1,
+      "ext": ""
+    },
+    {
       "key": "drpyS_OmoFun[漫]",
       "name": "OmoFun[漫](DS)",
       "type": 4,
@@ -434,6 +624,16 @@
       "searchable": 2,
       "filterable": 1,
       "quickSearch": 0,
+      "ext": ""
+    },
+    {
+      "key": "drpyS_TVB云播",
+      "name": "TVB云播(DS)",
+      "type": 4,
+      "api": "http://localhost:5757/api/TVB云播",
+      "searchable": 2,
+      "filterable": 1,
+      "quickSearch": 2,
       "ext": ""
     },
     {

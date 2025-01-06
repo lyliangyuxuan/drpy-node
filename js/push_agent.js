@@ -38,6 +38,11 @@ var rule = {
             vod.vod_name = push_vod.name || push_vod.vod_name || '';
             vod.vod_pic = push_vod.pic || push_vod.vod_pic || '';
             vod.vod_play_url = push_vod.url || push_vod.vod_play_url || '';
+            // 推送json兼容依赖播放属性
+            vod.vod_play_api = push_vod.vod_play_api || '';
+            vod.vod_play_flag = push_vod.vod_play_flag || null;
+            vod.vod_play_index = push_vod.vod_play_index || null;
+            vod.vod_play_position = push_vod.vod_play_position || null;
             return vod
         } catch (e) {
         }
