@@ -105,10 +105,12 @@ var rule = {
         }
         let playform = []
         let playurls = []
+        let playPans = [];
         for (const item of $('.module-row-title')) {
             const a = $(item).find('p:first')[0];
             let link = a.children[0].data.trim()
             if (/pan.quark.cn/.test(link)) {
+                playPans.push(link);
                 const shareData = Quark.getShareData(link);
                 if (shareData) {
                     const videos = await Quark.getFilesByShareUrl(shareData);
@@ -124,6 +126,7 @@ var rule = {
                     }
                 }
             } else if (/drive.uc.cn/.test(link)) {
+                playPans.push(link);
                 const shareData = UC.getShareData(link);
                 if (shareData) {
                     const videos = await UC.getFilesByShareUrl(shareData);
@@ -142,25 +145,24 @@ var rule = {
         }
         vod.vod_play_from = playform.join("$$$")
         vod.vod_play_url = playurls.join("$$$")
+        vod.vod_play_pan = playPans.join("$$$")
         return vod
     },
     搜索: async function (wd, quick, pg) {
-        let {input} = this
-        let html = (await getHtml(input)).data
-        const $ = pq(html)
-        let videos = []
-        $('.module-search-item').each((index, item) => {
-            const a = $(item).find('.video-serial:first')[0];
-            const img = $(item).find('img:first')[0];
-            const content = $(item).find('.video-text:first').text();
-            videos.push({
-                "vod_name": a.attribs.title,
-                "vod_id": a.attribs.href,
-                "vod_remarks": content,
-                "vod_pic": img.attribs['data-src']
+        let {input, pdfa, pdfh, pd} = this;
+        let html = await request(input);
+        let d = [];
+        let data = pdfa(html, '.module-items .module-search-item');
+        data.forEach((it) => {
+            d.push({
+                title: pdfh(it, 'a&&title'),
+                pic_url: pd(it, 'img&&data-src'),
+                desc: pdfh(it, '.video-text&&Text'),
+                url: pd(it, 'a:eq(-1)&&href'),
+                content: pdfh(it, '.video-info-items:eq(-1)&&Text'),
             })
-        })
-        return videos
+        });
+        return setResult(d);
     },
     lazy: async function (flag, id, flags) {
         let {input, mediaProxyUrl} = this;
