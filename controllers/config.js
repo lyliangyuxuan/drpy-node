@@ -140,7 +140,7 @@ async function generateSiteJSON(options, requestHost, sub, pwd) {
             return {
                 func: async ({file, dr2Dir, requestHost, pwd, drpy, SitesMap}) => {
                     const baseName = path.basename(file, '.js'); // 去掉文件扩展名
-                    let api = `assets://js/lib/drpy2.js`;  // 使用内置drpy2
+                    let api = `https://gitee.com/zhxyad/little-tiger-spot/raw/master/drpy_libs/drpy2.min.js`;  // 使用内置drpy2
                     let ext = `${requestHost}/js/${file}`;
                     if (pwd) {
                         ext += `?pwd=${pwd}`;
