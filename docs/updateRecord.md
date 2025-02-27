@@ -1,5 +1,69 @@
 # drpyS更新记录
 
+### 20250227
+
+更新至V1.1.22
+
+1. 优化123网盘的逻辑和推送示例
+2. 优化sqlite3库兼容装逼壳
+
+### 20250226
+
+更新至V1.1.21
+
+1. 增加123网盘的逻辑和推送示例
+
+### 20250225
+
+更新至V1.1.20
+
+1. UC整体逻辑修改，并在扫码插件增加了UC_TOKEN扫码逻辑
+2. 数据库sqlite3优化，寻找另一个wasm实现的库平替了兼容性极差的sqlite3原生库
+
+### 20250224
+
+更新至V1.1.19
+
+1. 修复 推送和所有网盘源涉及的UC播放问题，支持原代本和原代服务加速
+2. 更新猫爪的 alist.js
+3. 新增 `sqlite` `sqlite3` 依赖，在ds源里的异步方法里直接使用，示例:
+
+```javascript
+await database.startDb();
+console.log('database:', database);
+const db = database.db;
+// 创建表
+await db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+    )
+  `);
+
+// 插入数据
+await db.run('INSERT INTO users (name) VALUES (?)', ['Alice']);
+await db.run('INSERT INTO users (name) VALUES (?)', ['Bob']);
+
+// 查询数据
+const users = await db.all('SELECT * FROM users');
+console.log(users);
+
+// 更新数据
+await db.run('UPDATE users SET name = ? WHERE id = ?', ['Charlie', 1]);
+
+// 查询更新后的数据
+const updatedUsers = await db.all('SELECT * FROM users');
+console.log(updatedUsers);
+
+// 删除数据
+await db.run('DELETE FROM users WHERE id = ?', [2]);
+
+// 查询删除后的数据
+const finalUsers = await db.all('SELECT * FROM users');
+console.log(finalUsers);
+await database.endDb();
+```
+
 ### 20250211
 
 更新至V1.1.18
