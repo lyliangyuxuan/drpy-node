@@ -10,9 +10,8 @@ var rule = {
     headers: {'User-Agent': 'MOBILE_UA'},
     searchable:1,quickSearch:1,double:true,timeout:5000,play_parse:true,filterable:1,invalid:true,
     class_name: '电影&电视剧&动漫&短剧&综艺',
-    class_url: '/id/1&/id/2&/id/4&/id/5&/id/3',
-    filter_url: '{{fl.area}}{{fl.by}}{{fl.class}}{{fl.类型}}/page/fypage{{fl.year}}',
-    filter_def: {'/id/1': {类型: '/id/1'},'/id/2': {类型: '/id/2'},'/id/3': {类型: '/id/3'},'/id/4': {类型: '/id/4'},'/id/5': {类型: '/id/5'}},
+    class_url: '1&2&4&5&3',
+    
     预处理: async () => {
         return []
     },
