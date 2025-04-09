@@ -5,7 +5,7 @@ var rule = {
     desc: '不告诉你',
     host: 'https://xyys.top',
     logo:'https://i-blog.csdnimg.cn/blog_migrate/2621e710a94ab40ba66645d47f296aaf.gif',
-    url: '/index.php/vod/show/fyfilter.html',
+    url: '/index.php/vod/show/id/fyclass/page/fypage.html',
     searchUrl: '/index.php/vod/search/page/fypage/wd/**.html',
     headers: {'User-Agent': 'MOBILE_UA'},
     searchable:1,quickSearch:1,double:true,timeout:5000,play_parse:true,filterable:1,invalid:true,
