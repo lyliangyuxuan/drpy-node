@@ -3,7 +3,7 @@ var rule = {
     title: '九七电影网',
     编码: 'gb18030',
     desc: '不告诉你',
-    host: 'http://m.aogetu.com',
+    host: 'https://97dyq.com/',
     url: '/fyclass/indexfypage.html[/fyclass]',
     searchUrl: '/s.asp?page=fypage&searchword=**&searchtype=-1',
     headers: {'User-Agent': 'MOBILE_UA'},
